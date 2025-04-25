@@ -183,13 +183,12 @@ int main(int argc, char* argv[]) {
         1e15, 0, -10,
         log_radius(1e15), CCOLOR};
 
-    i32 running = 1;
     Uint32 lastTime = SDL_GetTicks();
 
-    while (running) {
+    while (1) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) running = 0;
+            if (e.type == SDL_QUIT) goto done;
             if (e.type == SDL_WINDOWEVENT && \
                 e.window.event == SDL_WINDOWEVENT_RESIZED)
                 reset_planets();
@@ -214,6 +213,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    done:
     SDL_DestroyRenderer(state.renderer);
     SDL_DestroyWindow(state.window);
     SDL_Quit();
