@@ -1,7 +1,5 @@
 #include <SDL2/SDL.h>
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 typedef double          f64;
 typedef float           f32;
@@ -126,8 +124,8 @@ void draw_grav_field() {
 void calculate_gravity(Planet* p1, Planet* p2, \
     double* ax1, double* ay1, \
     double* ax2, double* ay2) {
-    double dx = delta_x(p1, p2);
-    double dy = delta_y(p1, p2);
+    double dx = delta_x(p2, p1);
+    double dy = delta_y(p2, p1);
     double dist = dist(dx, dy);
     if (dist < 1) dist = 1;
 
@@ -152,11 +150,20 @@ void reset_planets() {
 }
 
 void simulate_step() {
-    double ax1, ay1, ax2, ay2;
-    calculate_gravity(&state.planets[0], &state.planets[1], &ax1, &ay1, &ax2, &ay2);
+    f64 ax1, ay1, ax2, ay2;
+    calculate_gravity(
+        &state.planets[0],
+        &state.planets[1],
+        &ax1, &ay1, &ax2, &ay2);
 
-    update_position(&state.planets[0], ax1, ay1, TIME_STEP);
-    update_position(&state.planets[1], ax2, ay2, TIME_STEP);
+    update_position(
+        &state.planets[0],
+        ax1, ay1,
+        TIME_STEP);
+    update_position(
+        &state.planets[1],
+        ax2, ay2,
+        TIME_STEP);
 }
 
 int main(int argc, char* argv[]) {
