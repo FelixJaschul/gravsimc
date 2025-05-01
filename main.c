@@ -1,48 +1,6 @@
 #include <SDL2/SDL.h>
 #include <math.h>
-
-typedef double          f64;
-typedef float           f32;
-typedef int             i32;
-typedef Uint32          u32;
-
-#define WIDTH           800
-#define HEIGHT          600
-
-#define G               6.67440e-11f
-#define OFFSET          100
-#define TIME_STEP       0.05
-
-#define SPACING         15
-#define MAX_VECTOR_LENGTH \
-                        50
-#define MAX_INFLUENCE   300
-
-#define VCOLOR          0xD3D3D3FF
-#define CCOLOR          0xD3D3D3FF
-#define BCOLOR          0xFFFFFFFF
-
-#define NUM_PLANETS     2
-
-#define centerX         ({ WIDTH  / 2; })
-#define centerY         ({ HEIGHT / 2; })
-#define log_radius(a)   ({ (i32)(log(a * 2)); })
-#define draw_radius(p)  ({ p->radius; })
-#define mult(a, c)      ({ a * c; })
-#define delta_x(p, b)   ({ p->x - b->x; })
-#define delta_y(p, b)   ({ p->y - b->y; })
-#define dist(a, c)      ({ sqrt(a * a + c * c); })
-#define force(p, b, c)  ({ G * p->mass * b->mass / (c * c); })
-#define angle(a, b)     ({ atan2(a, b); })
-#define axc(p, a, c)    ({  a * cos(c) / p->mass; })
-#define axs(p, a, c)    ({  a * sin(c) / p->mass; })
-#define ayc(p, a, c)    ({ -a * cos(c) / p->mass; })
-#define ays(p, a, c)    ({ -a * sin(c) / p->mass; })
-
-#define r(p)            ({ (p->color >> 24) & 0xFF; })
-#define g(p)            ({ (p->color >> 16) & 0xFF; })
-#define b(p)            ({ (p->color >> 8)  & 0xFF; })
-#define a(p)            ({ (p->color & 0xFF); })
+#include "main.h"
 
 typedef struct {
     f64 x, y,
@@ -59,7 +17,7 @@ struct {
     Planet planets[NUM_PLANETS];
 } state;
 
-void draw_planet(Planet* p) {
+void draw_planet(const Planet* p) {
     i32 drawRadius = draw_radius(p);
     if (drawRadius < 3) drawRadius = 3;
 
@@ -77,7 +35,7 @@ void draw_planet(Planet* p) {
                 );
 }
 
-void update_position(Planet* p, f64 ax, f64 ay, f64 dt) {
+void update_position(Planet* p, const f64 ax, const f64 ay, const f64 dt) {
     p->velocityX += mult(ax, dt);
     p->velocityY += mult(ay, dt);
     p->x += mult(p->velocityX, dt);
@@ -85,34 +43,35 @@ void update_position(Planet* p, f64 ax, f64 ay, f64 dt) {
 }
 
 void draw_grav_field() {
-    SDL_SetRenderDrawColor(
-        state.renderer,
+    SDL_SetRenderDrawColor(state.renderer,
         211, 211, 211, 255
     );
     for (int x = 0; x < WIDTH; x += SPACING) {
         for (int y = 0; y < HEIGHT; y += SPACING) {
-            f64 totalFx = 0,
-                totalFy = 0;
+            f64 totalFx = 0;
+            f64 totalFy = 0;
 
             for (int i = 0; i < NUM_PLANETS; i++) {
-                f64 dx = state.planets[i].x - x,
-                    dy = state.planets[i].y - y,
-                    dist = sqrt(dx * dx + dy * dy);
+                const f64 dx = state.planets[i].x - x;
+                const f64 dy = state.planets[i].y - y;
+                const f64 dist = sqrt(dx * dx + dy * dy);
                 if (dist > MAX_INFLUENCE || dist < 1) continue;
 
-                f64 force = G * state.planets[i].mass / (dist * dist),
-                    angle = atan2(dy, dx);
+                const f64 force = G * state.planets[i].mass / (dist * dist);
+                const f64 angle = atan2(dy, dx);
                 totalFx += force * cos(angle);
                 totalFy += force * sin(angle);
             }
 
-            double mag = sqrt(totalFx * totalFx + totalFy * totalFy);
+            double mag = sqrt(
+                totalFx * totalFx + \
+                totalFy * totalFy);
             if (mag > 0) {
                 if (mag > MAX_VECTOR_LENGTH) mag = MAX_VECTOR_LENGTH;
-                f64 nx = totalFx / sqrt(totalFx * totalFx + totalFy * totalFy),
-                    ny = totalFy / sqrt(totalFx * totalFx + totalFy * totalFy);
-                int endX = (int)(x + nx * mag);
-                int endY = (int)(y + ny * mag);
+                const f64 nx = totalFx / sqrt(totalFx * totalFx + totalFy * totalFy);
+                const f64 ny = totalFy / sqrt(totalFx * totalFx + totalFy * totalFy);
+                const int endX = (int)(x + nx * mag);
+                const int endY = (int)(y + ny * mag);
                 SDL_RenderDrawLine(state.renderer
                     , x, y, endX, endY
                 );
@@ -122,15 +81,15 @@ void draw_grav_field() {
 }
 
 void calculate_gravity(Planet* p1, Planet* p2, \
-    double* ax1, double* ay1, \
-    double* ax2, double* ay2) {
-    double dx = delta_x(p2, p1);
-    double dy = delta_y(p2, p1);
+    f64* ax1, f64* ay1, \
+    f64* ax2, f64* ay2) {
+    const f64 dx = delta_x(p2, p1);
+    const f64 dy = delta_y(p2, p1);
     double dist = dist(dx, dy);
     if (dist < 1) dist = 1;
 
-    double force = force(p1, p2, dist);
-    double angle = angle(dy, dx);
+    const double force = force(p1, p2, dist);
+    const double angle = angle(dy, dx);
     *ax1 = axc(p1, force, angle);
     *ay1 = axs(p1, force, angle);
     *ax2 = ayc(p1, force, angle);
@@ -166,49 +125,59 @@ void simulate_step() {
         TIME_STEP);
 }
 
-int main(int argc, char* argv[]) {
+int main() {
     SDL_Init(SDL_INIT_VIDEO);
 
-    state.window = SDL_CreateWindow(
+    state.window =
+        SDL_CreateWindow(
         "WINDOW",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         WIDTH, HEIGHT,
         SDL_WINDOW_RESIZABLE);
-    state.renderer = SDL_CreateRenderer(
-        state.window,
-        -1,
+    state.renderer =
+        SDL_CreateRenderer(
+        state.window, -1,
         SDL_RENDERER_ACCELERATED);
 
     // Initialize planets
-    state.planets[0] = (Planet){
-        centerX - OFFSET, centerY,
-        1e15, 0, 10,
-        log_radius(1e15), CCOLOR};
-    state.planets[1] = (Planet){
-        centerX + OFFSET, centerY,
-        1e15, 0, -10,
-        log_radius(1e15), CCOLOR};
+    state.planets[0] =
+        (Planet) {
+        centerX - OFFSET,
+        centerY,
+        1e15,
+        0, +10,
+        log_radius(1e15),
+        CCOLOR };
 
-    Uint32 lastTime = SDL_GetTicks();
+    state.planets[1] =
+        (Planet) {
+        centerX + OFFSET,
+        centerY,
+        1e15,
+        0, -10,
+        log_radius(1e15),
+        CCOLOR };
+
+    Uint32 t0 = SDL_GetTicks();
 
     while (1) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) goto done;
-            if (e.type == SDL_WINDOWEVENT && \
-                e.window.event == SDL_WINDOWEVENT_RESIZED)
+            if (e.type == SDL_WINDOWEVENT \
+            && e.window.event \
+            == SDL_WINDOWEVENT_RESIZED)
                 reset_planets();
         }
 
-        Uint32 current = SDL_GetTicks();
-        if (current - lastTime >= 4) {
+        const Uint32 t1 = SDL_GetTicks();
+        if (t1 - t0 >= 4) {
             simulate_step();
-            lastTime = current;
+            t0 = t1;
 
             SDL_SetRenderDrawColor(state.renderer,
-                255, 255, 255, 255
-            );
+                255, 255, 255, 255);
             SDL_RenderClear(state.renderer);
 
             draw_grav_field();
